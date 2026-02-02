@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POWDER | Global Ski Finder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --snow-white: #f8fafc;
+            --ice-blue: #e0f2fe;
+            --deep-navy: #0c1929;
+            --alpine-blue: #1e40af;
+            --frost: #94a3b8;
+            --gold-accent: #fbbf24;
+            --fresh-powder: #38bdf8;
+            --budget-green: #34d399;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --filter-bg: rgba(255, 255, 255, 0.02);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--deep-navy);
+            color: var(--snow-white);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Topographic background pattern */
+        .topo-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .topo-bg svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Grain overlay */
+        .grain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0.35;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeDown 1s ease-out;
+        }
+
+        @keyframes fadeDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(4rem, 12vw, 8rem);
+            letter-spacing: 0.3em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--snow-white) 0%, var(--ice-blue) 50%, var(--frost) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 80px rgba(56, 189, 248, 0.3);
+        }
+
+        .tagline {
+            font-size: 0.875rem;
+            letter-spacing: 0.4em;
+            text-transform: uppercase;
+            color: var(--frost);
+            font-weight: 300;
+        }
+
+        .origin-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            color: var(--frost);
+        }
+
+        .origin-badge svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Filter Panel */
+        .filter-panel {
+            background: var(--filter-bg);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 1.75rem;
+            margin-bottom: 2.5rem;
+            animation: fadeDown 1s ease-out 0.2s backwards;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .filter-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.25rem;
+            letter-spacing: 0.15em;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .filter-title svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--fresh-powder);
+        }
+
+        .reset-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--frost);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .reset-btn:hover {
+            border-color: var(--fresh-powder);
+            color: var(--fresh-powder);
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        @media (max-width: 1100px) {
+            .filter-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .filter-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--frost);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-label svg {
+            width: 14px;
+            height: 14px;
+            opacity: 0.7;
+        }
+
+        /* Region Pills */
+        .region-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .region-pill {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: var(--frost);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .region-pill:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+            color: var(--snow-white);
+        }
+
+        .region-pill.active {
+            background: var(--fresh-powder);
+            border-color: var(--fresh-powder);
+            color: var(--deep-navy);
+            font-weight: 500;
+        }
+
+        /* Custom Range Sliders */
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .slider-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            color: var(--snow-white);
+        }
+
+        .slider-value.snow { color: var(--fresh-powder); }
+        .slider-value.flight { color: var(--budget-green); }
+        .slider-value.lodging { color: var(--gold-accent); }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--snow-white);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--snow-white);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-range {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: rgba(148, 163, 184, 0.5);
+        }
+
+        /* Priority Weights */
+        .priority-section {
+            grid-column: span 1;
+        }
+
+        .priority-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .priority-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .priority-label {
+            font-size: 0.7rem;
+            width: 50px;
+            color: var(--frost);
+        }
+
+        .priority-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .priority-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .priority-bar.snow { background: var(--fresh-powder); }
+        .priority-bar.flight { background: var(--budget-green); }
+        .priority-bar.lodging { background: var(--gold-accent); }
+
+        .priority-value {
+            font-size: 0.75rem;
+            width: 35px;
+            text-align: right;
+            font-weight: 500;
+        }
+
+        /* Sort Dropdown */
+        .sort-select {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            color: var(--snow-white);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            width: 100%;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .sort-select:hover, .sort-select:focus {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .sort-select option {
+            background: var(--deep-navy);
+            color: var(--snow-white);
+        }
+
+        /* Results count */
+        .results-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 0 0.5rem;
+        }
+
+        .results-count {
+            font-size: 0.8rem;
+            color: var(--frost);
+        }
+
+        .results-count span {
+            color: var(--snow-white);
+            font-weight: 500;
+        }
+
+        .active-filters {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .active-filter-tag {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 100px;
+            font-size: 0.7rem;
+            color: var(--fresh-powder);
+        }
+
+        .active-filter-tag svg {
+            width: 12px;
+            height: 12px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .active-filter-tag svg:hover {
+            opacity: 1;
+        }
+
+        /* Destinations Grid */
+        .destinations {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        @media (max-width: 1100px) {
+            .destinations {
+                grid-template-columns: 1fr;
+                max-width: 500px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+
+        /* No results state */
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--frost);
+        }
+
+        .no-results-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1.5rem;
+            opacity: 0.3;
+        }
+
+        .no-results h3 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.5rem;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+            color: var(--snow-white);
+        }
+
+        .no-results p {
+            font-size: 0.85rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        /* Destination Card */
+        .destination-card {
+            position: relative;
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: cardReveal 0.5s ease-out backwards;
+        }
+
+        @keyframes cardReveal {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.97);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .destination-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(56, 189, 248, 0.3);
+            box-shadow:
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                0 0 100px rgba(56, 189, 248, 0.1);
+        }
+
+        .card-image {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+        }
+
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .destination-card:hover .card-image img {
+            transform: scale(1.08);
+        }
+
+        .card-image::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60%;
+            background: linear-gradient(to top, var(--deep-navy), transparent);
+        }
+
+        .rank-badge {
+            position: absolute;
+            top: 1.25rem;
+            left: 1.25rem;
+            width: 44px;
+            height: 44px;
+            background: var(--snow-white);
+            color: var(--deep-navy);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            z-index: 2;
+        }
+
+        .region-badge {
+            position: absolute;
+            bottom: 1rem;
+            left: 1.25rem;
+            padding: 0.4rem 0.75rem;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 6px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--frost);
+            z-index: 2;
+        }
+
+        .snow-live {
+            position: absolute;
+            top: 1.25rem;
+            right: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.875rem;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            z-index: 2;
+        }
+
+        .snow-live::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--fresh-powder);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .location-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.25rem;
+        }
+
+        .resort-name {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.75rem;
+            letter-spacing: 0.05em;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+
+        .country {
+            font-size: 0.75rem;
+            color: var(--frost);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .overall-score {
+            text-align: right;
+        }
+
+        .score-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 2.25rem;
+            color: var(--gold-accent);
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 0.6rem;
+            color: var(--frost);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Metrics */
+        .metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .metric {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .metric-info {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .metric-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .metric-icon svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--frost);
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            color: var(--frost);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .metric-bar-container {
+            width: 70px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .metric-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease-out;
+        }
+
+        .metric-bar.snow { background: var(--fresh-powder); }
+        .metric-bar.flight { background: var(--budget-green); }
+        .metric-bar.lodging { background: var(--gold-accent); }
+
+        /* CTA Button */
+        .card-cta {
+            margin-top: 1.25rem;
+            width: 100%;
+            padding: 0.875rem;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: var(--snow-white);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card-cta:hover {
+            background: var(--snow-white);
+            color: var(--deep-navy);
+            border-color: var(--snow-white);
+        }
+
+        /* Footer info */
+        .update-info {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .update-time {
+            font-size: 0.75rem;
+            color: var(--frost);
+            letter-spacing: 0.1em;
+        }
+
+        .methodology {
+            margin-top: 1rem;
+            font-size: 0.7rem;
+            color: rgba(148, 163, 184, 0.6);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        /* Snowfall animation */
+        .snowflakes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            overflow: hidden;
+        }
+
+        .snowflake {
+            position: absolute;
+            top: -10px;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.4;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Topographic background -->
+    <div class="topo-bg">
+        <svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">
+            <defs>
+                <pattern id="topo" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
+                    <path d="M0 50 Q50 30 100 50 T200 50" fill="none" stroke="white" stroke-width="0.5"/>
+                    <path d="M0 80 Q60 60 100 80 T200 80" fill="none" stroke="white" stroke-width="0.5"/>
+                    <path d="M0 110 Q40 90 100 110 T200 110" fill="none" stroke="white" stroke-width="0.5"/>
+                    <path d="M0 140 Q70 120 100 140 T200 140" fill="none" stroke="white" stroke-width="0.5"/>
+                    <path d="M0 170 Q50 150 100 170 T200 170" fill="none" stroke="white" stroke-width="0.5"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#topo)"/>
+        </svg>
+    </div>
+
+    <!-- Grain overlay -->
+    <div class="grain"></div>
+
+    <!-- Snowfall effect -->
+    <div class="snowflakes" id="snowflakes"></div>
+
+    <div class="container">
+        <header>
+            <h1 class="logo">POWDER</h1>
+            <p class="tagline">Global Ski Destination Finder</p>
+            <div class="origin-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="10" r="3"/>
+                    <path d="M12 2a8 8 0 0 0-8 8c0 5.4 7 11.5 7.3 11.8a1 1 0 0 0 1.4 0C13 21.5 20 15.4 20 10a8 8 0 0 0-8-8z"/>
+                </svg>
+                Departing from Chicago, IL
+            </div>
+        </header>
+
+        <!-- Filter Panel -->
+        <div class="filter-panel">
+            <div class="filter-header">
+                <div class="filter-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M7 12h10M10 18h4"/>
+                    </svg>
+                    FILTER & PRIORITIZE
+                </div>
+                <button class="reset-btn" onclick="resetFilters()">Reset All</button>
+            </div>
+
+            <div class="filter-grid">
+                <!-- Region Filter -->
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                        Region
+                    </label>
+                    <div class="region-pills" id="region-pills">
+                        <button class="region-pill active" data-region="all">All</button>
+                        <button class="region-pill" data-region="americas">Americas</button>
+                        <button class="region-pill" data-region="europe">Europe</button>
+                        <button class="region-pill" data-region="asia">Asia</button>
+                    </div>
+                </div>
+
+                <!-- Max Flight Budget -->
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 19V5M5 12l7-7 7 7"/>
+                        </svg>
+                        Max Flight Price
+                    </label>
+                    <div class="slider-container">
+                        <div class="slider-value flight" id="flight-value">$1,500</div>
+                        <input type="range" id="flight-slider" min="300" max="1500" value="1500" step="50">
+                        <div class="slider-range">
+                            <span>$300</span>
+                            <span>$1,500</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Max Lodging Budget -->
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/>
+                        </svg>
+                        Max Lodging/Night
+                    </label>
+                    <div class="slider-container">
+                        <div class="slider-value lodging" id="lodging-value">$400</div>
+                        <input type="range" id="lodging-slider" min="50" max="400" value="400" step="25">
+                        <div class="slider-range">
+                            <span>$50</span>
+                            <span>$400</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Min Snow -->
+                <div class="filter-group">
+                    <label class="filter-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M2 12h20M12 2l4 4M12 2l-4 4"/>
+                        </svg>
+                        Min Fresh Snow (48hr)
+                    </label>
+                    <div class="slider-container">
+                        <div class="slider-value snow" id="snow-value">0 in</div>
+                        <input type="range" id="snow-slider" min="0" max="30" value="0" step="2">
+                        <div class="slider-range">
+                            <span>0 in</span>
+                            <span>30 in</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Priority Weights Section -->
+            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                <label class="filter-label" style="margin-bottom: 1rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20V10M18 20V4M6 20v-4"/>
+                    </svg>
+                    Priority Weights (click bars to adjust)
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                    <div class="priority-item">
+                        <span class="priority-label">Snow</span>
+                        <div class="priority-bar-bg" data-priority="snow">
+                            <div class="priority-bar snow" id="snow-priority-bar" style="width: 40%"></div>
+                        </div>
+                        <span class="priority-value" id="snow-priority-value">40%</span>
+                    </div>
+                    <div class="priority-item">
+                        <span class="priority-label">Flights</span>
+                        <div class="priority-bar-bg" data-priority="flight">
+                            <div class="priority-bar flight" id="flight-priority-bar" style="width: 35%"></div>
+                        </div>
+                        <span class="priority-value" id="flight-priority-value">35%</span>
+                    </div>
+                    <div class="priority-item">
+                        <span class="priority-label">Lodging</span>
+                        <div class="priority-bar-bg" data-priority="lodging">
+                            <div class="priority-bar lodging" id="lodging-priority-bar" style="width: 25%"></div>
+                        </div>
+                        <span class="priority-value" id="lodging-priority-value">25%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Bar -->
+        <div class="results-bar">
+            <div class="results-count">
+                Showing <span id="results-count">3</span> destinations
+            </div>
+            <div class="active-filters" id="active-filters"></div>
+        </div>
+
+        <div class="destinations" id="destinations">
+            <!-- Cards populated by JS -->
+        </div>
+
+        <div class="update-info">
+            <p class="update-time">DATA REFRESHED: <span id="update-time"></span></p>
+            <p class="methodology">Rankings based on 48-hour snowfall reports, real-time flight prices from ORD, and average nightly lodging rates. Adjust priority weights above to customize scoring.</p>
+        </div>
+    </div>
+
+    <script>
+        // Extended destination data
+        const allDestinations = [
+            {
+                id: 1,
+                name: "Niseko United",
+                country: "Japan",
+                region: "asia",
+                image: "https://images.unsplash.com/photo-1551524559-8af4e6624178?w=800&q=80",
+                snowfallNum: 28,
+                snowfall: "28 in",
+                snowScore: 95,
+                flightNum: 847,
+                flight: "$847",
+                flightScore: 68,
+                lodgingNum: 142,
+                lodging: "$142/night",
+                lodgingScore: 74
+            },
+            {
+                id: 2,
+                name: "Zermatt",
+                country: "Switzerland",
+                region: "europe",
+                image: "https://images.unsplash.com/photo-1520209759809-a9bcb6cb3241?w=800&q=80",
+                snowfallNum: 18,
+                snowfall: "18 in",
+                snowScore: 78,
+                flightNum: 612,
+                flight: "$612",
+                flightScore: 82,
+                lodgingNum: 285,
+                lodging: "$285/night",
+                lodgingScore: 45
+            },
+            {
+                id: 3,
+                name: "Whistler Blackcomb",
+                country: "Canada",
+                region: "americas",
+                image: "https://images.unsplash.com/photo-1605540436563-5bca919ae766?w=800&q=80",
+                snowfallNum: 14,
+                snowfall: "14 in",
+                snowScore: 65,
+                flightNum: 389,
+                flight: "$389",
+                flightScore: 91,
+                lodgingNum: 198,
+                lodging: "$198/night",
+                lodgingScore: 58
+            },
+            {
+                id: 4,
+                name: "Chamonix",
+                country: "France",
+                region: "europe",
+                image: "https://images.unsplash.com/photo-1548777123-e216912df7d8?w=800&q=80",
+                snowfallNum: 22,
+                snowfall: "22 in",
+                snowScore: 88,
+                flightNum: 645,
+                flight: "$645",
+                flightScore: 79,
+                lodgingNum: 195,
+                lodging: "$195/night",
+                lodgingScore: 60
+            },
+            {
+                id: 5,
+                name: "Aspen Snowmass",
+                country: "USA",
+                region: "americas",
+                image: "https://images.unsplash.com/photo-1579447215125-bbd4e5ed9eb9?w=800&q=80",
+                snowfallNum: 12,
+                snowfall: "12 in",
+                snowScore: 55,
+                flightNum: 285,
+                flight: "$285",
+                flightScore: 95,
+                lodgingNum: 380,
+                lodging: "$380/night",
+                lodgingScore: 25
+            },
+            {
+                id: 6,
+                name: "Hakuba Valley",
+                country: "Japan",
+                region: "asia",
+                image: "https://images.unsplash.com/photo-1542359649-6ee67aaa8408?w=800&q=80",
+                snowfallNum: 24,
+                snowfall: "24 in",
+                snowScore: 90,
+                flightNum: 892,
+                flight: "$892",
+                flightScore: 64,
+                lodgingNum: 98,
+                lodging: "$98/night",
+                lodgingScore: 88
+            },
+            {
+                id: 7,
+                name: "St. Anton",
+                country: "Austria",
+                region: "europe",
+                image: "https://images.unsplash.com/photo-1516450360452-9312f5463c66?w=800&q=80",
+                snowfallNum: 16,
+                snowfall: "16 in",
+                snowScore: 72,
+                flightNum: 580,
+                flight: "$580",
+                flightScore: 84,
+                lodgingNum: 175,
+                lodging: "$175/night",
+                lodgingScore: 65
+            },
+            {
+                id: 8,
+                name: "Park City",
+                country: "USA",
+                region: "americas",
+                image: "https://images.unsplash.com/photo-1544448728-a078bee63e6e?w=800&q=80",
+                snowfallNum: 10,
+                snowfall: "10 in",
+                snowScore: 48,
+                flightNum: 245,
+                flight: "$245",
+                flightScore: 97,
+                lodgingNum: 225,
+                lodging: "$225/night",
+                lodgingScore: 52
+            },
+            {
+                id: 9,
+                name: "Val d'Isère",
+                country: "France",
+                region: "europe",
+                image: "https://images.unsplash.com/photo-1527004013197-933c4bb611b3?w=800&q=80",
+                snowfallNum: 20,
+                snowfall: "20 in",
+                snowScore: 82,
+                flightNum: 698,
+                flight: "$698",
+                flightScore: 75,
+                lodgingNum: 320,
+                lodging: "$320/night",
+                lodgingScore: 35
+            },
+            {
+                id: 10,
+                name: "Banff Sunshine",
+                country: "Canada",
+                region: "americas",
+                image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
+                snowfallNum: 16,
+                snowfall: "16 in",
+                snowScore: 72,
+                flightNum: 320,
+                flight: "$320",
+                flightScore: 93,
+                lodgingNum: 165,
+                lodging: "$165/night",
+                lodgingScore: 68
+            },
+            {
+                id: 11,
+                name: "Cortina d'Ampezzo",
+                country: "Italy",
+                region: "europe",
+                image: "https://images.unsplash.com/photo-1491555103944-7c647fd857e6?w=800&q=80",
+                snowfallNum: 14,
+                snowfall: "14 in",
+                snowScore: 65,
+                flightNum: 720,
+                flight: "$720",
+                flightScore: 72,
+                lodgingNum: 245,
+                lodging: "$245/night",
+                lodgingScore: 48
+            },
+            {
+                id: 12,
+                name: "Yongpyong",
+                country: "South Korea",
+                region: "asia",
+                image: "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=800&q=80",
+                snowfallNum: 8,
+                snowfall: "8 in",
+                snowScore: 38,
+                flightNum: 1150,
+                flight: "$1,150",
+                flightScore: 45,
+                lodgingNum: 85,
+                lodging: "$85/night",
+                lodgingScore: 92
+            }
+        ];
+
+        // Filter state
+        let filters = {
+            region: 'all',
+            maxFlight: 1500,
+            maxLodging: 400,
+            minSnow: 0,
+            priorities: {
+                snow: 40,
+                flight: 35,
+                lodging: 25
+            }
+        };
+
+        // Calculate overall score based on priorities
+        function calculateScore(dest) {
+            const { snow, flight, lodging } = filters.priorities;
+            return Math.round(
+                (dest.snowScore * snow / 100) +
+                (dest.flightScore * flight / 100) +
+                (dest.lodgingScore * lodging / 100)
+            );
+        }
+
+        // Filter and sort destinations
+        function getFilteredDestinations() {
+            return allDestinations
+                .filter(dest => {
+                    if (filters.region !== 'all' && dest.region !== filters.region) return false;
+                    if (dest.flightNum > filters.maxFlight) return false;
+                    if (dest.lodgingNum > filters.maxLodging) return false;
+                    if (dest.snowfallNum < filters.minSnow) return false;
+                    return true;
+                })
+                .map(dest => ({
+                    ...dest,
+                    overall: calculateScore(dest)
+                }))
+                .sort((a, b) => b.overall - a.overall)
+                .slice(0, 3)
+                .map((dest, index) => ({
+                    ...dest,
+                    rank: index + 1
+                }));
+        }
+
+        function createDestinationCard(dest, index) {
+            const regionLabels = {
+                americas: 'Americas',
+                europe: 'Europe',
+                asia: 'Asia Pacific'
+            };
+
+            return `
+                <article class="destination-card" style="animation-delay: ${index * 0.15}s">
+                    <div class="card-image">
+                        <img src="${dest.image}" alt="${dest.name}" loading="lazy">
+                        <div class="rank-badge">${dest.rank}</div>
+                        <div class="snow-live">${dest.snowfall} fresh</div>
+                        <div class="region-badge">${regionLabels[dest.region]}</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="location-header">
+                            <div>
+                                <h2 class="resort-name">${dest.name}</h2>
+                                <p class="country">${dest.country}</p>
+                            </div>
+                            <div class="overall-score">
+                                <div class="score-value">${dest.overall}</div>
+                                <div class="score-label">Score</div>
+                            </div>
+                        </div>
+                        <div class="metrics">
+                            <div class="metric">
+                                <div class="metric-info">
+                                    <div class="metric-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 2v20M2 12h20M12 2l4 4M12 2l-4 4"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="metric-label">Fresh Snow (48hr)</div>
+                                        <div class="metric-value">${dest.snowfall}</div>
+                                    </div>
+                                </div>
+                                <div class="metric-bar-container">
+                                    <div class="metric-bar snow" style="width: ${dest.snowScore}%"></div>
+                                </div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-info">
+                                    <div class="metric-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 19V5M5 12l7-7 7 7"/>
+                                            <path d="M4 19h16"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="metric-label">Flight from ORD</div>
+                                        <div class="metric-value">${dest.flight}</div>
+                                    </div>
+                                </div>
+                                <div class="metric-bar-container">
+                                    <div class="metric-bar flight" style="width: ${dest.flightScore}%"></div>
+                                </div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-info">
+                                    <div class="metric-icon">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/>
+                                            <path d="M9 9h1M9 13h1M9 17h1"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="metric-label">Avg. Lodging</div>
+                                        <div class="metric-value">${dest.lodging}</div>
+                                    </div>
+                                </div>
+                                <div class="metric-bar-container">
+                                    <div class="metric-bar lodging" style="width: ${dest.lodgingScore}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="card-cta">View Packages →</button>
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderDestinations() {
+            const container = document.getElementById('destinations');
+            const filtered = getFilteredDestinations();
+
+            document.getElementById('results-count').textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="no-results">
+                        <svg class="no-results-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 15s1.5-2 4-2 4 2 4 2"/>
+                            <line x1="9" y1="9" x2="9.01" y2="9"/>
+                            <line x1="15" y1="9" x2="15.01" y2="9"/>
+                        </svg>
+                        <h3>No Destinations Match</h3>
+                        <p>Try adjusting your filters or increasing your budget to see more options.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map((dest, i) => createDestinationCard(dest, i)).join('');
+
+            // Animate metric bars
+            setTimeout(() => {
+                document.querySelectorAll('.metric-bar').forEach(bar => {
+                    const width = bar.style.width;
+                    bar.style.width = '0%';
+                    setTimeout(() => {
+                        bar.style.width = width;
+                    }, 50);
+                });
+            }, 100);
+        }
+
+        function updateActiveFilters() {
+            const container = document.getElementById('active-filters');
+            const tags = [];
+
+            if (filters.region !== 'all') {
+                const labels = { americas: 'Americas', europe: 'Europe', asia: 'Asia' };
+                tags.push(`<span class="active-filter-tag">${labels[filters.region]}<svg onclick="clearFilter('region')" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>`);
+            }
+            if (filters.maxFlight < 1500) {
+                tags.push(`<span class="active-filter-tag">Flight ≤$${filters.maxFlight}<svg onclick="clearFilter('flight')" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>`);
+            }
+            if (filters.maxLodging < 400) {
+                tags.push(`<span class="active-filter-tag">Lodging ≤$${filters.maxLodging}<svg onclick="clearFilter('lodging')" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>`);
+            }
+            if (filters.minSnow > 0) {
+                tags.push(`<span class="active-filter-tag">Snow ≥${filters.minSnow}in<svg onclick="clearFilter('snow')" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></span>`);
+            }
+
+            container.innerHTML = tags.join('');
+        }
+
+        function clearFilter(type) {
+            switch(type) {
+                case 'region':
+                    filters.region = 'all';
+                    document.querySelectorAll('.region-pill').forEach(p => p.classList.remove('active'));
+                    document.querySelector('[data-region="all"]').classList.add('active');
+                    break;
+                case 'flight':
+                    filters.maxFlight = 1500;
+                    document.getElementById('flight-slider').value = 1500;
+                    document.getElementById('flight-value').textContent = '$1,500';
+                    break;
+                case 'lodging':
+                    filters.maxLodging = 400;
+                    document.getElementById('lodging-slider').value = 400;
+                    document.getElementById('lodging-value').textContent = '$400';
+                    break;
+                case 'snow':
+                    filters.minSnow = 0;
+                    document.getElementById('snow-slider').value = 0;
+                    document.getElementById('snow-value').textContent = '0 in';
+                    break;
+            }
+            updateActiveFilters();
+            renderDestinations();
+        }
+
+        function resetFilters() {
+            filters = {
+                region: 'all',
+                maxFlight: 1500,
+                maxLodging: 400,
+                minSnow: 0,
+                priorities: { snow: 40, flight: 35, lodging: 25 }
+            };
+
+            document.querySelectorAll('.region-pill').forEach(p => p.classList.remove('active'));
+            document.querySelector('[data-region="all"]').classList.add('active');
+
+            document.getElementById('flight-slider').value = 1500;
+            document.getElementById('flight-value').textContent = '$1,500';
+
+            document.getElementById('lodging-slider').value = 400;
+            document.getElementById('lodging-value').textContent = '$400';
+
+            document.getElementById('snow-slider').value = 0;
+            document.getElementById('snow-value').textContent = '0 in';
+
+            updatePriorityBars();
+            updateActiveFilters();
+            renderDestinations();
+        }
+
+        function updatePriorityBars() {
+            document.getElementById('snow-priority-bar').style.width = filters.priorities.snow + '%';
+            document.getElementById('snow-priority-value').textContent = filters.priorities.snow + '%';
+            document.getElementById('flight-priority-bar').style.width = filters.priorities.flight + '%';
+            document.getElementById('flight-priority-value').textContent = filters.priorities.flight + '%';
+            document.getElementById('lodging-priority-bar').style.width = filters.priorities.lodging + '%';
+            document.getElementById('lodging-priority-value').textContent = filters.priorities.lodging + '%';
+        }
+
+        // Event listeners
+        document.querySelectorAll('.region-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.region-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                filters.region = pill.dataset.region;
+                updateActiveFilters();
+                renderDestinations();
+            });
+        });
+
+        document.getElementById('flight-slider').addEventListener('input', (e) => {
+            filters.maxFlight = parseInt(e.target.value);
+            document.getElementById('flight-value').textContent = '$' + filters.maxFlight.toLocaleString();
+            updateActiveFilters();
+            renderDestinations();
+        });
+
+        document.getElementById('lodging-slider').addEventListener('input', (e) => {
+            filters.maxLodging = parseInt(e.target.value);
+            document.getElementById('lodging-value').textContent = '$' + filters.maxLodging;
+            updateActiveFilters();
+            renderDestinations();
+        });
+
+        document.getElementById('snow-slider').addEventListener('input', (e) => {
+            filters.minSnow = parseInt(e.target.value);
+            document.getElementById('snow-value').textContent = filters.minSnow + ' in';
+            updateActiveFilters();
+            renderDestinations();
+        });
+
+        // Priority bar click handlers
+        document.querySelectorAll('.priority-bar-bg').forEach(bar => {
+            bar.addEventListener('click', (e) => {
+                const rect = bar.getBoundingClientRect();
+                const clickPercent = Math.round((e.clientX - rect.left) / rect.width * 100);
+                const priority = bar.dataset.priority;
+
+                const oldValue = filters.priorities[priority];
+                const diff = clickPercent - oldValue;
+
+                // Redistribute the difference among other priorities
+                const otherKeys = Object.keys(filters.priorities).filter(k => k !== priority);
+                const perOther = diff / otherKeys.length;
+
+                filters.priorities[priority] = Math.max(0, Math.min(100, clickPercent));
+                otherKeys.forEach(key => {
+                    filters.priorities[key] = Math.max(0, Math.min(100, filters.priorities[key] - perOther));
+                });
+
+                // Normalize to 100%
+                const total = Object.values(filters.priorities).reduce((a, b) => a + b, 0);
+                Object.keys(filters.priorities).forEach(key => {
+                    filters.priorities[key] = Math.round(filters.priorities[key] / total * 100);
+                });
+
+                updatePriorityBars();
+                renderDestinations();
+            });
+        });
+
+        // Update time
+        document.getElementById('update-time').textContent = new Date().toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Create snowfall effect
+        function createSnowflakes() {
+            const container = document.getElementById('snowflakes');
+            const count = 25;
+
+            for (let i = 0; i < count; i++) {
+                const flake = document.createElement('div');
+                flake.className = 'snowflake';
+                flake.style.left = Math.random() * 100 + '%';
+                flake.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                flake.style.animationDelay = Math.random() * 10 + 's';
+                flake.style.opacity = Math.random() * 0.4 + 0.1;
+                flake.style.width = flake.style.height = (Math.random() * 3 + 2) + 'px';
+                container.appendChild(flake);
+            }
+        }
+
+        // Initialize
+        createSnowflakes();
+        renderDestinations();
+        updateActiveFilters();
+    </script>
+</body>
+</html>
